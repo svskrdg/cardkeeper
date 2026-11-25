@@ -37,7 +37,7 @@
         const key=number.replace(/\D/g,"");
         if(!seen.has(key)){seen.add(key);phoneCandidates.push(number);}
       }
-      if(!info.address&&ADDR.test(line)&&/\d/.test(line)&&!line.includes("@")) info.address=line;
+      if(!info.address&&ADDR.test(line)&&/\d/.test(line)&&!line.includes("@")) info.address=line.replace(/^[^\p{L}\p{N}]+/u,"").trim();
       if(!info.title&&ROLE.test(line)&&!line.includes("@")&&!ORG_WORDS.test(line)&&line.length<85)info.title=line.replace(/^(?:title|position|role)\s*:\s*/i,"");
       if(!info.company&&LEGAL.test(line)&&!line.includes("@")&&line.length<85)info.company=line;
     }
