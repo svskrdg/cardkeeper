@@ -11,7 +11,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="apple-touch-icon" href="./icon.svg">
-  <link rel="stylesheet" href="./style.css?v=2">
+  <link rel="stylesheet" href="./style.css?v=3">
   <title>CardKeeper · Business Card Scanner</title>
 </head>
 <body>
@@ -64,15 +64,21 @@
         <div class="lang-select">
           <label for="lang">Card language</label>
           <select id="lang">
-            <option value="eng+ron+tur">Automatic · EN + RO + TR</option>
-            <option value="eng">English (faster)</option>
+            <option value="eng+ron+tur">Mixed languages · EN / RO / TR (slower)</option>
+            <option value="eng" selected>English · recommended for English text</option>
             <option value="ron">Română</option>
             <option value="tur">Türkçe</option>
           </select>
         </div>
-        <div class="helper">First scan needs internet to download OCR language data. Photos stay on your device.</div>
+        <label class="enhance-toggle"><input type="checkbox" id="enhance" checked> Try second, enhanced scan for better text recognition</label><div class="helper">Choose the card’s language for better Turkish/Romanian characters. First scan downloads OCR data; the photo stays on your iPhone.</div>
       </section>
 
+      <section class="scan-card" aria-labelledby="nativeHeading">
+        <div class="section-header"><div class="step-number">★</div><div><h2 id="nativeHeading">Apple Live Text alternative</h2><p>For cards our scanner reads poorly</p></div></div>
+        <p class="helper">Tap the box, then long-press and choose <strong>Scan Text</strong> if Safari offers it. Otherwise copy text from the card in the iPhone Photos app using Live Text and paste here. This uses Apple's recognition instead of Tesseract.</p>
+        <textarea id="liveTextInput" rows="3" class="native-paste" placeholder="Tap and hold → Scan Text, or paste text from Photos"></textarea>
+        <button class="secondary-button full-width" id="parseLiveText" type="button">Organize this text into contact fields</button>
+      </section>
       <section id="workingSection" class="working hidden" role="status" aria-live="polite">
         <div class="spinner" aria-hidden="true"></div>
         <div class="work-copy">
@@ -92,6 +98,8 @@
           <button id="newScanButton" class="small-ghost" type="button">New card</button>
         </div>
 
+        <div class="photo-controls"><button id="rotateButton" type="button" class="secondary-button">Rotate 90° + Rescan</button><button id="retryOCR" type="button" class="secondary-button">Retry OCR</button></div>
+        <div id="scanWarnings" class="scan-warnings hidden"></div>
         <form id="contactForm" autocomplete="off">
           <div class="two-col">
             <label class="field">First name<input id="firstName" type="text" autocomplete="off" placeholder="First name"></label>
@@ -104,7 +112,12 @@
           <label class="field">Email<input id="email" type="email" autocomplete="off" placeholder="name@company.com"></label>
           <label class="field">Website<input id="website" type="text" autocomplete="off" placeholder="www.company.com"></label>
           <label class="field">Address<input id="address" type="text" autocomplete="off" placeholder="Street, city, country"></label>
-          <details class="raw-details"><summary>See recognized text</summary><textarea id="rawText" readonly rows="5"></textarea></details>
+          <section class="recognized-lines" aria-label="Assign recognized card text">
+            <h3>Fix misplaced information</h3>
+            <p>Each row below contains text found on the card. Choose the right field to place it without retyping.</p>
+            <div id="recognizedLines"></div>
+          </section>
+          <details class="raw-details"><summary>Full recognized text</summary><textarea id="rawText" rows="5" spellcheck="false"></textarea><button type="button" id="reparseText" class="secondary-button full-width">Re-read corrected text</button></details>
           <button id="saveContactButton" class="save-button" type="submit">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m-4-4 4 4 4-4M4 17v3h16v-3"/></svg>
             Save to iPhone Contacts
@@ -122,7 +135,7 @@
       </section>
     </main>
     <footer>
-      <span>CardKeeper Web · v1.0</span>
+      <span>CardKeeper Web · v1.1</span>
       <button type="button" id="installHelp">Add to Home Screen</button>
     </footer>
   </div>
@@ -136,6 +149,7 @@
       <button class="primary-button dialog-ok" id="dialogOK" type="button">Got it</button>
     </div>
   </dialog>
-  <script src="./app.js?v=2" defer></script>
+  <script src="./parser.js?v=3" defer></script>
+  <script src="./app.js?v=3" defer></script>
 </body>
 </html>
