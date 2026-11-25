@@ -70,7 +70,7 @@
             <option value="tur">Türkçe</option>
           </select>
         </div>
-        <label class="enhance-toggle"><input type="checkbox" id="enhance" checked> Try second, enhanced scan for better text recognition</label><div class="helper">Choose the card’s language for better Turkish/Romanian characters. First scan downloads OCR data; the photo stays on your iPhone.</div>
+        <label class="enhance-toggle"><input type="checkbox" id="enhance" checked> Try second, enhanced scan for better text recognition</label><div class="helper">Choose the card’s language for better Turkish/Romanian characters. If the photo includes both sides, tap <strong>Crop card front</strong> after scanning. The photo stays on your iPhone.</div>
       </section>
 
       <section class="scan-card" aria-labelledby="nativeHeading">
@@ -98,7 +98,7 @@
           <button id="newScanButton" class="small-ghost" type="button">New card</button>
         </div>
 
-        <div class="photo-controls"><button id="rotateButton" type="button" class="secondary-button">Rotate 90° + Rescan</button><button id="retryOCR" type="button" class="secondary-button">Retry OCR</button></div>
+        <div class="photo-controls"><button id="cropButton" type="button" class="secondary-button">Crop card front</button><button id="retryOCR" type="button" class="secondary-button">Retry OCR</button></div>
         <div id="scanWarnings" class="scan-warnings hidden"></div>
         <form id="contactForm" autocomplete="off">
           <div class="two-col">
@@ -139,6 +139,19 @@
       <button type="button" id="installHelp">Add to Home Screen</button>
     </footer>
   </div>
+
+  <dialog id="cropDialog" class="crop-dialog">
+    <div class="dialog-content">
+      <button class="dialog-close" id="closeCropDialog" aria-label="Close" type="button">×</button>
+      <h2>Crop the card's front</h2>
+      <p>Drag a rectangle around only the side with contact details. Exclude any logo-only back side or surrounding screen.</p>
+      <canvas id="cropCanvas" aria-label="Select the area of the photo to read"></canvas>
+      <div class="crop-buttons">
+        <button id="cancelCropButton" type="button" class="secondary-button">Cancel</button>
+        <button id="applyCropButton" type="button" class="primary-button" disabled>Crop &amp; scan</button>
+      </div>
+    </div>
+  </dialog>
 
   <dialog id="installDialog">
     <div class="dialog-content">
