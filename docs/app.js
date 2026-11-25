@@ -138,6 +138,11 @@ async function scanImage(file){
   if(!file.type.startsWith("image/")){notice("Choose an image file.");return;}
   if(file.size>35*1024*1024){notice("Photo is too large. Try a smaller image.");return;}
   imageFile=file;running=true;$("message").classList.add("hidden");
+  // Do not let stale fields from a previous card survive a failed scan.
+  for(const field of FIELDS)$(field).value="";
+  $("rawText").value="";
+  $("recognizedLines").replaceChildren();
+  $("resultsSection").classList.add("hidden");
   progress(true,"Preparing your card","Loading image at readable resolution",.03);
   try{
     const canvas=await canvasFromPhoto(file,imageAngle);
