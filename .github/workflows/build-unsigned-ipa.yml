@@ -3,6 +3,10 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+    paths:
+      - 'CardKeeper/**'
+      - 'project.yml'
+      - '.github/workflows/build-unsigned-ipa.yml'
 permissions:
   contents: read
 jobs:
