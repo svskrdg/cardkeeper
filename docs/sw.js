@@ -1,1 +1,13 @@
-const CACHE="cardkeeper-shell-v2";const CORE=["./","./index.html","./style.css?v=2","./app.js?v=2","./icon.svg","./manifest.webmanifest"];self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));self.addEventListener("fetch",e=>{const r=e.request;if(r.method!=="GET"||new URL(r.url).origin!==self.location.origin)return;e.respondWith(fetch(r).then(response=>{if(response.ok){const c=response.clone();caches.open(CACHE).then(cache=>cache.put(r,c))}return response}).catch(()=>caches.match(r)))});
+const CACHE="cardkeeper-shell-v3";const CORE=["./","./index.html","./style.css?v=3","./parser.js?v=3","./app.js?v=3","./icon.svg","./manifest.webmanifest"];
+self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting())));
+self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
+self.addEventListener("fetch",event=>{
+  const request=event.request;
+  if(request.method!=="GET"||new URL(request.url).origin!==self.location.origin)return;
+  event.respondWith(fetch(request).then(response=>{
+    if(response.ok&&response.type!=="opaque"){
+      const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(request,copy)).catch(()=>{});
+    }
+    return response;
+  }).catch(()=>caches.match(request)));
+});
