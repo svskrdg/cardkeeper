@@ -5,8 +5,8 @@
   const WEB=/(?:https?:\/\/)?(?:www\.)[\w.-]+\.[A-Z]{2,}(?:\/\S*)?/gi;
   const ROLE=/\b(?:CEO|CFO|COO|CTO|director|manager|coordinator|consultant|engineer|specialist|owner|founder|president|administrator|accountant|sales|marketing|agent|agent de turism|executive|assistant)\b|(?:müdür(?:ü)?|yönetici|başkan|mühendis|sorumlusu|asistent|reprezentant)/iu;
   const LEGAL=/(?:\b(?:s\.?\s*r\.?\s*l\.?|s\.?\s*a\.?|ltd\.?|limited|llc|inc\.?|gmbh|corp\.?|corporation|co\.?)\b|(?:a\.ş\.?|şirketi|ticaret))$/iu;
-  const ORG_WORDS=/(?:travel|turizm|tourism|agency|hotel|hotels|holding|group|consulting|logistics|enterprise|tours|reizen|turist|transports)/iu;
-  const ADDR=/(?:\b(?:strada|str\.|street|st\.|bulevard(?:ul)?|bd\.|blvd|avenue|road|sector|postcode|postal|sokak|sok\.|cadde|caddesi|mahallesi|no\.)\b|mahalle|bucurești|bucuresti)/iu;
+  const ORG_WORDS=/(?:travel|turizm|tourism|agency|hotel|hotels|holding|group|consulting|logistics|enterprise|tours|reizen|turist|transports|rentals|rental|rent|hire|scooter|car rental)/iu;
+  const ADDR=/(?:\b(?:strada|str\.|street|st\.|bulevard(?:ul)?|bd\.|blvd|avenue|road|sector|postcode|postal|via|viale|piazza|corso|sokak|sok\.|cadde|caddesi|mahallesi|no\.)\b|mahalle|bucurești|bucuresti)/iu;
   const PHONE_LABEL=/(?:\b(?:tel(?:efon)?|phone|mobile|mobil|gsm|cell|fax|t:|m:)\b)/iu;
   function cleanLine(s){return String(s).replace(/[\t\u00a0]+/g," ").replace(/[ \u200b]{2,}/g," ").trim();}
   function phoneNumbers(line){
@@ -57,6 +57,25 @@
     }
     if(!info.firstName&&!info.lastName)warnings.push("Name needs review.");
     if(!info.company)warnings.push("Company needs review.");
+    if(info.email && info.website) {
+      // Repair common one-character OCR errors in printed websites only when the mail domain independently agrees.
+      const domain=info.email.split("@").pop().toLowerCase();
+      const bare=info.website.replace(/^https?:\/\//i,"").replace(/^www\./i,"").replace(/\/.*$/,"").toLowerCase();
+      const similar=(a,b)=>{
+        if(Math.abs(a.length-b.length)>2) return false;
+        let old=Array.from({length:b.length+1},(_,i)=>i);
+        for(let i=1;i<=a.length;i++){
+          const next=[i];
+          for(let j=1;j<=b.length;j++)next[j]=Math.min(next[j-1]+1,old[j]+1,old[j-1]+(a[i-1]===b[j-1]?0:1));
+          old=next;
+        }
+        return old[b.length]<=2;
+      };
+      if(bare!==domain && similar(bare,domain)){
+        info.website=(/^https?:\/\//i.test(info.website) ? info.website.match(/^https?:\/\//i)[0] : "")+"www."+domain;
+        warnings.push("Website normalized using the matching email domain. Verify the address.");
+      }
+    }
     if(!info.phone)warnings.push("Phone number needs review.");
     if(/[�ÃÂ][^\s]?/.test(raw))warnings.push("Some characters may be misread. Compare with the card photo.");
     for(const line of lines){
