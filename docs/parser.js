@@ -48,11 +48,16 @@
       info.firstName=words[0]||"";
       info.lastName=words.slice(1).join(" ");
     } else if(candidates.length>1){
-      // Two plausible names is ambiguous: do not silently choose the first.
-      warnings.push("Several possible names. Please select the correct line below.");
+      // Prefer first complete name only when all candidates share the same surname.
+      const names=candidates.map(line=>line.split(/\s+/));
+      const last=names[0].at(-1).toLowerCase();
+      if(names.every(words=>words.at(-1).toLowerCase()===last)){
+        info.firstName=names[0][0]||"";
+        info.lastName=names[0].slice(1).join(" ");
+      } else warnings.push("Several possible names. Please select the correct line below.");
     }
     if(!info.company){
-      const possible=lines.filter(s=>ORG_WORDS.test(s)&&!s.includes("@")&&s.length<65);
+      const possible=lines.filter(s=>ORG_WORDS.test(s)&&!s.includes("@")&&!/https?:|www\.|\.[a-z]{2,}(?:\/|$)/i.test(s)&&s.length<65);
       if(possible.length===1&&!ROLE.test(possible[0]))info.company=possible[0];
     }
     if(!info.firstName&&!info.lastName)warnings.push("Name needs review.");
