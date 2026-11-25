@@ -189,7 +189,8 @@ async function scanImage(file){
       if(tall) {
         await recognize(regionCanvas(canvas,.04,.025,.66,.24),"6","upper details",.48);
         await recognize(regionCanvas(canvas,.04,.27,.66,.21),"6","lower details",.64);
-        await recognize(regionCanvas(canvas,.14,.64,.75,.27),"6","company/logo",.79);
+        await recognize(regionCanvas(canvas,.12,.112,.52,.078),"6","role/title",.74);
+        await recognize(regionCanvas(canvas,.18,.65,.64,.22),"6","company/logo",.84);
       }else{
         await recognize(regionCanvas(canvas,.02,.04,.76,.50),"6","upper details",.51);
         await recognize(regionCanvas(canvas,.02,.49,.88,.49),"6","lower details",.75);
@@ -197,13 +198,32 @@ async function scanImage(file){
     }
     // Put the focused regions before the full card to avoid choosing graphics as a person.
     const byPriority=reads.slice().sort((a,b)=>{
-      const priority={ "upper details":0,"lower details":1,"full card":2,"enhanced card":3,"company/logo":4};
+      const priority={ "upper details":0,"role/title":1,"lower details":2,"enhanced card":3,"full card":4,"company/logo":5};
       return priority[a.label]-priority[b.label];
     });
     const raw=mergeReads(byPriority);
     if(!raw)throw Error("Could not read the card. Crop just the text side or use Apple Live Text.");
     const confidence=reads.reduce((max,item)=>Math.max(max,item.confidence||0),0);
     showResults(raw,true,confidence);
+    // The full image may retain an email address that focused crops misread.
+    // In case of near-identical domains, prioritize the email detected in the full pass,
+    // while leaving every line available for the user to review.
+    const emailFromFull=window.CardKeeperParser.parseCard(full.raw).fields.email;
+    const emailFromParts=$("email").value;
+    if(emailFromFull&&emailFromParts&&emailFromFull!==emailFromParts) {
+      const localA=emailFromFull.split("@")[0],localB=emailFromParts.split("@")[0];
+      if(localA===localB) {
+        $("email").value=emailFromFull;
+        const www=($("website").value||"").replace(/^https?:\/\//i,"").replace(/^www\./i,"");
+        const domain=emailFromFull.split("@")[1];
+        if(www){
+          const tail=new URL("https://"+www).hostname;
+          let differences=Math.abs(tail.length-domain.length);
+          if(differences<=2){for(let i=0;i<Math.min(tail.length,domain.length);i++)if(tail[i]!==domain[i])differences++;}
+          if(differences<=2)$("website").value="www."+domain;
+        }
+      }
+    }
     if(confidence<60)notice("This photo is difficult to read. Crop to the card's front, or use Apple Live Text, before saving.");
   }catch(error){
     notice((error&&error.message)||"OCR failed. Use Apple Live Text or crop a clearer photo.");
