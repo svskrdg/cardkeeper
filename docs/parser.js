@@ -1,100 +1,118 @@
-(function(root) {
-  "use strict";
-  const EMPTY={firstName:"",lastName:"",company:"",title:"",phone:"",phone2:"",email:"",website:"",address:""};
-  const EMAIL=/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/gi;
-  const WEB=/(?:https?:\/\/)?(?:www\.)[\w.-]+\.[A-Z]{2,}(?:\/\S*)?/gi;
-  const ROLE=/\b(?:CEO|CFO|COO|CTO|director|manager|coordinator|consultant|engineer|specialist|owner|founder|president|administrator|accountant|sales|marketing|agent|agent de turism|executive|assistant)\b|(?:müdür(?:ü)?|yönetici|başkan|mühendis|sorumlusu|asistent|reprezentant)/iu;
-  const LEGAL=/(?:\b(?:s\.?\s*r\.?\s*l\.?|s\.?\s*a\.?|ltd\.?|limited|llc|inc\.?|gmbh|corp\.?|corporation|co\.?)\b|(?:a\.ş\.?|şirketi|ticaret))$/iu;
-  const ORG_WORDS=/(?:travel|turizm|tourism|agency|hotel|hotels|holding|group|consulting|logistics|enterprise|tours|reizen|turist|transports|rentals|rental|rent|hire|scooter|car rental)/iu;
-  const ADDR=/(?:\b(?:strada|str\.|street|st\.|bulevard(?:ul)?|bd\.|blvd|avenue|road|sector|postcode|postal|via|viale|piazza|corso|sokak|sok\.|cadde|caddesi|mahallesi|no\.)\b|mahalle|bucurești|bucuresti)/iu;
-  const PHONE_LABEL=/(?:\b(?:tel(?:efon)?|phone|mobile|mobil|gsm|cell|fax|t:|m:)\b)/iu;
-  function cleanLine(s){return String(s).replace(/[\t\u00a0]+/g," ").replace(/[ \u200b]{2,}/g," ").trim();}
-  function phoneNumbers(line){
-    if(/fax/i.test(line)) return [];
-    const m=line.match(/(?:(?:\+|00)\d{1,3}[ \-./()]*)?(?:\(?\d{2,5}\)?[ \-./()]*){2,5}\d{2,5}/g)||[];
-    return m.map(p=>p.trim().replace(/[.,;:]+$/,"")).filter(p=>{
-      const n=p.replace(/\D/g,"");
-      if(n.length<8||n.length>15)return false;
-      if(!p.startsWith("+")&&!p.startsWith("00")&&!PHONE_LABEL.test(line)&&n.length<10)return false;
-      return true;
-    });
+(function(root){
+"use strict";
+const FIELDS={firstName:"",lastName:"",company:"",title:"",phone:"",phone2:"",email:"",website:"",address:""};
+const emailRx=/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/i;
+const webRx=/(?:https?:\/\/)?(?:www\.)[\w.\-]+\.[a-z]{2,}(?:\/[^\s]*)?/i;
+const roleRx=/(?:\b(?:CEO|CFO|COO|CTO|director|manager|engineer|specialist|sales|marketing|gallery|coordinator|executive|consultant|assistant|founder|owner|administrator|accountant)\b|müdür(?:ü)?|yönetici|başkan|mühendis|satış|sorumlusu|reprezentant|responsabil|asistent|comercial)/iu;
+const organizationRx=/(?:\b(?:s\.?\s*r\.?\s*l\.?|s\.?\s*a\.?|ltd\.?|limited|llc|inc\.?|gmbh|corp\.?)\b|\b(?:travel|tours|turizm|tourism|hotel|group|logistics|rentals|rental|agency|cookware|holdings|consulting|kitchenware|automotive)\b|a\.ş\.)/iu;
+const addressRx=/(?:\b(?:strada|street|str\.|blvd|bulevard(?:ul)?|bd\.|avenue|road|sector|postal|postcode|via|viale|piazza|corso|sokak|sok\.|cadde|caddesi|mahallesi|mah\.|no\.)\b|bulvarı|bulvar|organize sanayi|bölgesi|başakşehir|ikitelli)/iu;
+const cityCountryRx=/(?:\b(?:istanbul|rome|roma|bucureşti|bucurești|bucuresti|ankara|turkiye|türkiye|romania|italia|italy|românia|köy|sector)\b|İstanbul)/iu;
+const clean=s=>String(s||"").replace(/[\t\u00a0]+/g," ").replace(/[ \u200b]{2,}/g," ").trim();
+function phoneNumbers(line){
+  if(/fax/i.test(line))return[];
+  const pattern=/(?:\+|00)?\d[\d()\s./-]{6,}\d/g;
+  return (line.match(pattern)||[]).map(p=>p.trim().replace(/[;,.:]+$/,"")).filter(p=>{
+    const d=p.replace(/\D/g,"");
+    if(d.length<8||d.length>15)return false;
+    if(/\b(?:postcode|postal|zip|address)\b/i.test(line))return false;
+    return /^\+|^00/.test(p)||/\b(?:tel|phone|mobile|mobil|gsm|cell)\b/i.test(line)||d.length>=10;
+  });
+}
+function nameCandidate(line){
+  if(!line||line.includes("@")||/(?:https?:|www\.|email|e-mail|phone|mobile|mobil|tel|gsm|fax|address)/i.test(line))return false;
+  if(addressRx.test(line)||cityCountryRx.test(line)||roleRx.test(line)||organizationRx.test(line))return false;
+  if(line.replace(/\D/g,"").length>1)return false;
+  const words=line.replace(/^(?:mr\.?|mrs\.?|ms\.?|dr\.?)\s+/i,"").split(/\s+/);
+  return words.length>=2&&words.length<=4&&words.every(w=>/^[\p{Lu}][\p{L}'’-]*$/u.test(w));
+}
+function formatDomain(mail){return mail.includes("@")?mail.split("@").pop().toLowerCase():"";}
+function editDistance(a,b){
+  if(Math.abs(a.length-b.length)>2)return 9;
+  let prev=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){
+    const next=[i];
+    for(let j=1;j<=b.length;j++)next[j]=Math.min(next[j-1]+1,prev[j]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    prev=next;
   }
-  function lineIsName(s) {
-    if(!s||s.includes("@")||/\b(?:www\.|http|email|e-mail|mail|phone|mobile|mobil|tel|fax|gsm|address)\b/i.test(s))return false;
-    if(ADDR.test(s)||ORG_WORDS.test(s)||ROLE.test(s)||LEGAL.test(s)||s.replace(/\D/g,"").length>1)return false;
-    const words=s.replace(/^(?:mr\.?|mrs\.?|ms\.?|dr\.?)\s+/i,"").split(/\s+/);
-    return words.length>=2&&words.length<=4&&words.every(w=>/^[\p{Lu}][\p{L}'’.‐-]*$/u.test(w));
+  return prev[b.length];
+}
+function parseCard(raw){
+  const fields={...FIELDS},warnings=[];
+  const source=String(raw||"");
+  // cap parser work; if OCR goes wild, don't create hundreds of assignments
+  const lines=source.split(/\r?\n/).map(clean).filter(Boolean).slice(0,120);
+  const mail=source.match(emailRx);
+  if(mail)fields.email=mail[0].replace(/[,;:.]+$/,"").toLowerCase();
+  const website=source.match(webRx);
+  if(website)fields.website=website[0].replace(/[,;:.]+$/,"");
+
+  const phones=[],numbers=new Set();
+  for(const line of lines){
+    for(const number of phoneNumbers(line)){
+      const key=number.replace(/\D/g,"");
+      if(!numbers.has(key)){phones.push(number);numbers.add(key);}
+    }
   }
-  function parseCard(raw){
-    const info={...EMPTY}, warnings=[], suggestions=[];
-    const lines=String(raw||"").split(/\r?\n/).map(cleanLine).filter(Boolean);
-    const emailMatches=[...String(raw||"").matchAll(EMAIL)].map(m=>m[0].replace(/[.,;:]+$/,""));
-    info.email=(emailMatches[0]||"").toLowerCase();
-    info.website=(String(raw||"").match(WEB)||[])[0]||"";
-    const seen=new Set(), phoneCandidates=[];
-    for(const line of lines){
-      for(const number of phoneNumbers(line)){
-        const key=number.replace(/\D/g,"");
-        if(!seen.has(key)){seen.add(key);phoneCandidates.push(number);}
-      }
-      if(!info.address&&ADDR.test(line)&&/\d/.test(line)&&!line.includes("@")) info.address=line.replace(/^[^\p{L}\p{N}]+/u,"").trim();
-      if(!info.title&&ROLE.test(line)&&!line.includes("@")&&!ORG_WORDS.test(line)&&line.length<85)info.title=line.replace(/^(?:title|position|role)\s*:\s*/i,"");
-      if(!info.company&&LEGAL.test(line)&&!line.includes("@")&&line.length<85)info.company=line;
+  fields.phone=phones[0]||"";fields.phone2=phones[1]||"";
+
+  const names=lines.map((s,i)=>nameCandidate(s)?i:-1).filter(i=>i>=0);
+  // Prefer a name adjacent to a job title, otherwise a unique name-like line.
+  const nearTitle=names.filter(i=>lines.slice(i+1,i+3).some(x=>roleRx.test(x)));
+  const fullNameIdx=nearTitle.length===1?nearTitle[0]:names.length===1?names[0]:-1;
+  if(fullNameIdx>=0){
+    const words=lines[fullNameIdx].split(/\s+/);
+    fields.firstName=words[0]||"";
+    fields.lastName=words.slice(1).join(" ");
+  }else if(names.length>1)warnings.push("Several possible names. Choose the correct one.");
+
+  const titleIndex=lines.findIndex(line=>roleRx.test(line)&&!line.includes("@")&&!organizationRx.test(line)&&line.length<75);
+  if(titleIndex>=0)fields.title=lines[titleIndex].replace(/^(?:title|position|role)\s*:\s*/i,"");
+
+  // An organization can be identified from printed text, not guessed from a mail domain.
+  const organizations=lines.filter(line=>organizationRx.test(line)&&!line.includes("@")&&!webRx.test(line)&&line.length<85&&!roleRx.test(line));
+  if(organizations.length===1)fields.company=organizations[0].replace(/^[^A-Za-zÀ-žĞğŞşİıÖöÜüÇç]+/,"").trim();
+
+  // Multiple address lines, usually at the bottom or on the card's right side.
+  // Do not mix telephone/email into the address.
+  const addrStart=lines.findIndex(line=>addressRx.test(line)&&!line.includes("@")&&phoneNumbers(line).length===0);
+  if(addrStart>=0){
+    const parts=[];
+    for(let j=addrStart;j<Math.min(lines.length,addrStart+5);j++){
+      const line=lines[j];
+      if(line.includes("@")||webRx.test(line)||phoneNumbers(line).length||roleRx.test(line))break;
+      if(j>addrStart && (nameCandidate(line)||organizationRx.test(line)))break;
+      if(j>addrStart && line.length>95)break;
+      const cleaned=line.replace(/^[^\p{L}\p{N}]+/u,"").trim();
+      if(cleaned)parts.push(cleaned);
     }
-    info.phone=phoneCandidates[0]||"";info.phone2=phoneCandidates[1]||"";
-    const candidates=lines.filter(lineIsName);
-    if(candidates.length===1) {
-      const words=candidates[0].replace(/^(?:mr\.?|mrs\.?|ms\.?|dr\.?)\s+/i,"").split(/\s+/);
-      info.firstName=words[0]||"";
-      info.lastName=words.slice(1).join(" ");
-    } else if(candidates.length>1){
-      // Prefer first complete name only when all candidates share the same surname.
-      const names=candidates.map(line=>line.split(/\s+/));
-      const last=names[0].at(-1).toLowerCase();
-      if(names.every(words=>words.at(-1).toLowerCase()===last)){
-        info.firstName=names[0][0]||"";
-        info.lastName=names[0].slice(1).join(" ");
-      } else warnings.push("Several possible names. Please select the correct line below.");
-    }
-    if(!info.company){
-      const possible=lines.filter(s=>ORG_WORDS.test(s)&&!s.includes("@")&&!/https?:|www\.|\.[a-z]{2,}(?:\/|$)/i.test(s)&&s.length<65);
-      if(possible.length===1&&!ROLE.test(possible[0]))info.company=possible[0];
-    }
-    if(!info.firstName&&!info.lastName)warnings.push("Name needs review.");
-    if(!info.company)warnings.push("Company needs review.");
-    if(info.email && info.website) {
-      // Repair common one-character OCR errors in printed websites only when the mail domain independently agrees.
-      const domain=info.email.split("@").pop().toLowerCase();
-      const bare=info.website.replace(/^https?:\/\//i,"").replace(/^www\./i,"").replace(/\/.*$/,"").toLowerCase();
-      const similar=(a,b)=>{
-        if(Math.abs(a.length-b.length)>2) return false;
-        let old=Array.from({length:b.length+1},(_,i)=>i);
-        for(let i=1;i<=a.length;i++){
-          const next=[i];
-          for(let j=1;j<=b.length;j++)next[j]=Math.min(next[j-1]+1,old[j]+1,old[j-1]+(a[i-1]===b[j-1]?0:1));
-          old=next;
-        }
-        return old[b.length]<=2;
-      };
-      if(bare!==domain && similar(bare,domain)){
-        info.website=(/^https?:\/\//i.test(info.website) ? info.website.match(/^https?:\/\//i)[0] : "")+"www."+domain;
-        warnings.push("Website normalized using the matching email domain. Verify the address.");
-      }
-    }
-    if(!info.phone)warnings.push("Phone number needs review.");
-    if(/[�ÃÂ][^\s]?/.test(raw))warnings.push("Some characters may be misread. Compare with the card photo.");
-    for(const line of lines){
-      let field="";
-      if(line.includes(info.email)&&info.email)field="email";
-      else if(line===info.title)field="title";
-      else if(line===info.company)field="company";
-      else if(line===info.address)field="address";
-      else if(lineIsName(line)&&candidates.length===1)field="firstName";
-      else if(phoneNumbers(line).length)field="phone";
-      suggestions.push({text:line,field});
-    }
-    return {fields:info,lines:suggestions,warnings};
+    fields.address=parts.join(", ");
   }
-  root.CardKeeperParser={parseCard,phoneNumbers};
-  if(typeof module!=="undefined"&&module.exports)module.exports=root.CardKeeperParser;
+  // Printed logo can be text-only. Treat company as unknown when only a domain exists.
+  if(!fields.company){
+    const possible=lines.filter(line=>organizationRx.test(line)&&!line.includes("@")&&!webRx.test(line)&&!roleRx.test(line)&&line.length<70);
+    if(possible.length===1)fields.company=possible[0];
+  }
+  if(fields.email&&fields.website){
+    const domain=formatDomain(fields.email);
+    const textDomain=fields.website.replace(/^https?:\/\//i,"").replace(/^www\./i,"").split("/")[0].toLowerCase();
+    if(domain!==textDomain && editDistance(domain,textDomain)<=2){
+      fields.website="www."+domain;
+      warnings.push("Website matched to email domain. Please verify.");
+    }
+  }
+  if(!fields.firstName&&!fields.lastName)warnings.push("Name needs review.");
+  if(!fields.company)warnings.push("Company is not printed or was not recognized.");
+  if(!fields.phone)warnings.push("Phone number needs review.");
+  const suggestions=lines.filter(line=>{
+    if(line.length<3 || line.length>110)return false;
+    if(!/[\p{L}\d]{2}/u.test(line))return false;
+    const letters=(line.match(/\p{L}/gu)||[]).length;
+    const digits=(line.match(/\d/g)||[]).length;
+    const punctuation=(line.match(/[^\p{L}\d\s@.:/+(),&'-]/gu)||[]).length;
+    return letters+digits>=3 && punctuation<=Math.max(4,Math.floor(line.length*.25));
+  }).slice(0,14).map(text=>({text,field:""}));
+  return {fields,warnings,lines:suggestions};
+}
+root.CardKeeperParser={parseCard,phoneNumbers};
+if(typeof module!=="undefined"&&module.exports)module.exports=root.CardKeeperParser;
 })(typeof globalThis!=="undefined"?globalThis:this);
