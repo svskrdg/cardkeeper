@@ -1,6 +1,10 @@
 name: Deploy CardKeeper Web
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/.publish'
 
 permissions:
   contents: read
