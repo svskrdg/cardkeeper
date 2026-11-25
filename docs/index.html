@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1530">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="CardKeeper">
+  <meta name="description" content="Private business-card scanner for iPhone. Scan, review and import to Contacts.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <link rel="apple-touch-icon" href="./icon.svg">
+  <link rel="stylesheet" href="./style.css?v=2">
+  <title>CardKeeper · Business Card Scanner</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32"><rect x="4" y="7" width="24" height="18" rx="3"/><path d="M9 12h7M9 17h12M9 21h9"/><circle cx="23" cy="12" r="2"/></svg>
+        </div>
+        <div><div class="brand-name">CardKeeper</div><div class="brand-sub">PRIVATE CARD SCANNER</div></div>
+      </div>
+      <span class="privacy-pill"><span class="dot"></span>On-device OCR</span>
+    </header>
+    <main class="content">
+      <section class="hero">
+        <span class="eyebrow">SCAN & SAVE</span>
+        <h1>Business cards,<br><span>straight to Contacts.</span></h1>
+        <p>Snap a photo. We'll read the details locally. Review and import the contact on your iPhone.</p>
+      </section>
+
+      <section class="scan-card" aria-labelledby="scanHeading">
+        <div class="section-header">
+          <div class="step-number">01</div>
+          <div><h2 id="scanHeading">Scan a business card</h2><p>Choose how to add your card</p></div>
+        </div>
+        <div class="scan-icon" aria-hidden="true">
+          <svg viewBox="0 0 160 96">
+            <rect x="25" y="13" width="110" height="70" rx="10" fill="#f7f9ff" stroke="#acbadd" stroke-width="2"/>
+            <rect x="39" y="28" width="37" height="7" rx="3" fill="#5665a7"/>
+            <rect x="39" y="42" width="72" height="5" rx="2" fill="#c4cce6"/>
+            <rect x="39" y="53" width="61" height="5" rx="2" fill="#c4cce6"/>
+            <rect x="39" y="64" width="49" height="5" rx="2" fill="#c4cce6"/>
+            <circle cx="113" cy="34" r="11" fill="#dce8ff"/>
+            <path d="M107 34h12m-6-6v12" stroke="#2c55b8" stroke-width="2" stroke-linecap="round"/>
+            <path d="M18 19v-9h9M142 19v-9h-9M18 77v9h9M142 77v9h-9" fill="none" stroke="#4c75d1" stroke-width="4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="actions">
+          <label class="primary-button" for="cameraInput">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h4l2-3h4l2 3h4v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            Take Photo
+          </label>
+          <label class="secondary-button" for="photoInput">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m5 18 5-5 3 3 3-4 4 6"/></svg>
+            Choose from Photos
+          </label>
+        </div>
+        <input class="hidden-input" id="cameraInput" type="file" accept="image/*" capture="environment">
+        <input class="hidden-input" id="photoInput" type="file" accept="image/*">
+        <div class="lang-select">
+          <label for="lang">Card language</label>
+          <select id="lang">
+            <option value="eng+ron+tur">Automatic · EN + RO + TR</option>
+            <option value="eng">English (faster)</option>
+            <option value="ron">Română</option>
+            <option value="tur">Türkçe</option>
+          </select>
+        </div>
+        <div class="helper">First scan needs internet to download OCR language data. Photos stay on your device.</div>
+      </section>
+
+      <section id="workingSection" class="working hidden" role="status" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="work-copy">
+          <strong id="workingTitle">Reading your card…</strong>
+          <p id="workingText">Preparing text recognition</p>
+          <div class="progress-track"><span id="progressBar"></span></div>
+        </div>
+      </section>
+
+      <section id="resultsSection" class="results hidden" aria-labelledby="resultsHeading">
+        <div class="section-header">
+          <div class="step-number">02</div>
+          <div><h2 id="resultsHeading">Review the details</h2><p>Correct anything before saving</p></div>
+        </div>
+        <div class="preview-wrap">
+          <img id="photoPreview" alt="Your business card photograph">
+          <button id="newScanButton" class="small-ghost" type="button">New card</button>
+        </div>
+
+        <form id="contactForm" autocomplete="off">
+          <div class="two-col">
+            <label class="field">First name<input id="firstName" type="text" autocomplete="off" placeholder="First name"></label>
+            <label class="field">Last name<input id="lastName" type="text" autocomplete="off" placeholder="Last name"></label>
+          </div>
+          <label class="field">Company<input id="company" type="text" autocomplete="off" placeholder="Company name"></label>
+          <label class="field">Job title<input id="title" type="text" autocomplete="off" placeholder="Position"></label>
+          <label class="field">Mobile / phone<input id="phone" type="tel" autocomplete="off" placeholder="+40 …"></label>
+          <label class="field">Second phone <span class="optional">(optional)</span><input id="phone2" type="tel" autocomplete="off" placeholder="Office number"></label>
+          <label class="field">Email<input id="email" type="email" autocomplete="off" placeholder="name@company.com"></label>
+          <label class="field">Website<input id="website" type="text" autocomplete="off" placeholder="www.company.com"></label>
+          <label class="field">Address<input id="address" type="text" autocomplete="off" placeholder="Street, city, country"></label>
+          <details class="raw-details"><summary>See recognized text</summary><textarea id="rawText" readonly rows="5"></textarea></details>
+          <button id="saveContactButton" class="save-button" type="submit">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m-4-4 4 4 4-4M4 17v3h16v-3"/></svg>
+            Save to iPhone Contacts
+          </button>
+          <p class="save-help">Your iPhone will ask you to confirm the new contact. If Safari downloads a .vcf file, open it from Downloads and choose Create New Contact.</p>
+          <button id="shareContactButton" class="text-button" type="button">Share / Save contact file instead</button>
+        </form>
+      </section>
+
+      <div id="message" class="message hidden" role="alert"></div>
+      <section class="info">
+        <div class="info-row"><span>✓</span><p>No account, ads, subscriptions or uploads</p></div>
+        <div class="info-row"><span>✓</span><p>Supports English, Romanian and Turkish</p></div>
+        <div class="info-row"><span>✓</span><p>Standard vCard works with Apple Contacts</p></div>
+      </section>
+    </main>
+    <footer>
+      <span>CardKeeper Web · v1.0</span>
+      <button type="button" id="installHelp">Add to Home Screen</button>
+    </footer>
+  </div>
+
+  <dialog id="installDialog">
+    <div class="dialog-content">
+      <button class="dialog-close" id="closeDialog" aria-label="Close" type="button">×</button>
+      <h2>Keep CardKeeper on your Home Screen</h2>
+      <p>Open this page in Safari. Tap the Share icon <strong>□↑</strong>, choose <strong>Add to Home Screen</strong>, then tap <strong>Add</strong>.</p>
+      <p class="small-note">When importing a contact, Safari may be more reliable than the Home Screen window. You can always reopen the website in Safari.</p>
+      <button class="primary-button dialog-ok" id="dialogOK" type="button">Got it</button>
+    </div>
+  </dialog>
+  <script src="./app.js?v=2" defer></script>
+</body>
+</html>
