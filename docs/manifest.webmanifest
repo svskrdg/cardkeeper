@@ -1,0 +1,18 @@
+{
+  "name": "CardKeeper — Business Card Scanner",
+  "short_name": "CardKeeper",
+  "description": "Private business card scanner for iPhone",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f6fc",
+  "theme_color": "#0b1530",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
