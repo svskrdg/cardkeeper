@@ -88,13 +88,15 @@ async function canvasFromPhoto(file,rotation){
   const source=URL.createObjectURL(file);
   try{
     const image=new Image();image.src=source;await image.decode();
-    const scale=Math.min(1,2400/Math.max(image.naturalWidth,image.naturalHeight));
+    // Small downloaded/screenshot cards need upscaling; otherwise 8px labels are unreadable.
+    const scale=Math.min(5,2400/Math.max(image.naturalWidth,image.naturalHeight));
     const width=Math.max(1,Math.round(image.naturalWidth*scale));
     const height=Math.max(1,Math.round(image.naturalHeight*scale));
     const turned=rotation%180!==0;
     const canvas=document.createElement("canvas");
     canvas.width=turned?height:width;canvas.height=turned?width:height;
     const ctx=canvas.getContext("2d",{willReadFrequently:true});
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
     ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.translate(canvas.width/2,canvas.height/2);ctx.rotate(rotation*Math.PI/180);
     ctx.drawImage(image,-width/2,-height/2,width,height);
@@ -217,7 +219,7 @@ async function scanImage(file){
         const www=($("website").value||"").replace(/^https?:\/\//i,"").replace(/^www\./i,"");
         const domain=emailFromFull.split("@")[1];
         if(www){
-          const tail=new URL("https://"+www).hostname;
+          const tail=www.split(/[\/:?#]/)[0];
           let differences=Math.abs(tail.length-domain.length);
           if(differences<=2){for(let i=0;i<Math.min(tail.length,domain.length);i++)if(tail[i]!==domain[i])differences++;}
           if(differences<=2)$("website").value="www."+domain;
@@ -227,6 +229,7 @@ async function scanImage(file){
     if(confidence<60)notice("This photo is difficult to read. Crop to the card's front, or use Apple Live Text, before saving.");
   }catch(error){
     notice((error&&error.message)||"OCR failed. Use Apple Live Text or crop a clearer photo.");
+    if(imageFile)showCard(true);
   }finally{
     if(worker){try{await worker.terminate();}catch(error){}worker=null;}
     progress(false);running=false;
