@@ -66,3 +66,14 @@ dialog{border:0;border-radius:18px;width:min(calc(100% - 34px),400px);padding:0;
 .crop-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}
 .crop-buttons button{padding:10px 6px;min-height:46px}
 @media (max-width:370px){.crop-dialog .dialog-content{padding:13px}}
+
+/* v1.3 - make the iPhone system text scanner the primary path */
+.scan-card[aria-labelledby="nativeHeading"]{border-color:#9ab7f1;box-shadow:0 8px 30px rgba(42,77,160,.09)}
+.scan-card[aria-labelledby="nativeHeading"] .step-number{background:#3159bf;color:#fff;font-size:19px}
+.scan-card[aria-labelledby="nativeHeading"] .helper{margin-top:13px;margin-bottom:12px;font-size:13px;color:#495b7f;line-height:1.6}
+.scan-card[aria-labelledby="nativeHeading"] .native-paste{min-height:108px}
+#focusLiveText{margin-bottom:9px}
+#parseLiveText{background:#335ac5;color:#fff;border-color:#335ac5;margin-bottom:2px}
+.recognized-lines{display:block;padding-top:13px;margin-top:4px}
+.recognized-lines summary{cursor:pointer;font-weight:700;font-size:13px;color:#3456a8;padding:9px 0}
+.recognized-lines h3{margin-top:12px}
