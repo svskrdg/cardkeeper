@@ -1,1 +1,1 @@
-CardKeeper v1.2 — low resolution OCR upscaling, two-sided card regions, crop control, Italian accents, improved parser.
+Release CardKeeper Web v1.3: prefer iPhone Scan Text; no OCR text merging; bounded review; Turkish multiline address parsing.
