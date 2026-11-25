@@ -133,28 +133,6 @@ function evaluateOCR(result){
   return {raw,confidence,score:confidence*.65+hits*13-Math.min(20,garbled*8)-Math.min(14,gibberish*.6)};
 }
 
-function regionCanvas(source,x,y,w,h){
-  const out=document.createElement("canvas");
-  const sx=Math.max(0,Math.round(source.width*x)), sy=Math.max(0,Math.round(source.height*y));
-  const sw=Math.max(1,Math.min(source.width-sx,Math.round(source.width*w)));
-  const sh=Math.max(1,Math.min(source.height-sy,Math.round(source.height*h)));
-  out.width=sw;out.height=sh;
-  out.getContext("2d").drawImage(source,sx,sy,sw,sh,0,0,sw,sh);
-  return out;
-}
-function mergeReads(resultList) {
-  const unique=[],keys=new Set();
-  for(const entry of resultList){
-    const lines=entry.raw.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
-    for(const line of lines){
-      if(line.length<3 || /^[^a-zA-ZÀ-žĞğŞşİıÖöÜüÇç0-9]*$/.test(line))continue;
-      const key=line.toLocaleLowerCase().replace(/^[^a-z0-9À-žğüşöçı]+/iu,"").replace(/[^\p{L}\p{N}@]+/gu,"");
-      if(key.length<3 || keys.has(key))continue;
-      keys.add(key);unique.push(line);
-    }
-  }
-  return unique.join("\n");
-}
 async function scanImage(file){
   if(!file||running)return;
   if(!file.type.startsWith("image/")){notice("Choose an image file.");return;}
@@ -173,60 +151,35 @@ async function scanImage(file){
         progress(true,"Recognizing text","Reading characters: "+Math.round((status.progress||0)*100)+"%",.13+(status.progress||0)*.19);
       else if(status.status)progress(true,"Preparing OCR",status.status,.07);
     }});
-    const reads=[];
-    async function recognize(input, mode, label, fraction) {
-      progress(true,"Reading "+label,"OCR analysis on your iPhone",fraction);
-      await worker.setParameters({tessedit_pageseg_mode:mode,preserve_interword_spaces:"1",user_defined_dpi:"300"});
-      const result=evaluateOCR(await worker.recognize(input));
-      reads.push({...result,label});
-      return result;
+    // Read each image at most twice. Never concatenate unrelated OCR passes:
+    // this previously created hundreds of garbage rows and duplicate text.
+    async function recognize(input, mode, step){
+      progress(true,"Reading card","Pass "+step+" of "+($("enhance").checked?"2":"1"),step===1?.28:.67);
+      await worker.setParameters({
+        tessedit_pageseg_mode:mode,
+        preserve_interword_spaces:"1",
+        user_defined_dpi:"300"
+      });
+      return evaluateOCR(await worker.recognize(input));
     }
-    // Use sparse layout for the entire card; avoid assumptions about font, columns or logo.
-    const full=await recognize(canvas,"11","full card",.15);
+    const first=await recognize(canvas,"11",1);
+    let best=first;
     if($("enhance").checked){
-      // Dense text and small accent characters usually need a different page layout.
-      await recognize(enhanceCanvas(canvas),"6","enhanced card",.33);
-      const tall=canvas.height>canvas.width*.90;
-      // Business cards pictured front-and-back (stacked) need independent OCR zones.
-      if(tall) {
-        await recognize(regionCanvas(canvas,.04,.025,.66,.24),"6","upper details",.48);
-        await recognize(regionCanvas(canvas,.04,.27,.66,.21),"6","lower details",.64);
-        await recognize(regionCanvas(canvas,.12,.112,.52,.078),"6","role/title",.74);
-        await recognize(regionCanvas(canvas,.18,.65,.64,.22),"6","company/logo",.84);
-      }else{
-        await recognize(regionCanvas(canvas,.02,.04,.76,.50),"6","upper details",.51);
-        await recognize(regionCanvas(canvas,.02,.49,.88,.49),"6","lower details",.75);
-      }
+      const second=await recognize(enhanceCanvas(canvas),"6",2);
+      if(second.raw && second.score>first.score+5)best=second;
     }
-    // Put the focused regions before the full card to avoid choosing graphics as a person.
-    const byPriority=reads.slice().sort((a,b)=>{
-      const priority={ "upper details":0,"role/title":1,"lower details":2,"enhanced card":3,"full card":4,"company/logo":5};
-      return priority[a.label]-priority[b.label];
-    });
-    const raw=mergeReads(byPriority);
-    if(!raw)throw Error("Could not read the card. Crop just the text side or use Apple Live Text.");
-    const confidence=reads.reduce((max,item)=>Math.max(max,item.confidence||0),0);
-    showResults(raw,true,confidence);
-    // The full image may retain an email address that focused crops misread.
-    // In case of near-identical domains, prioritize the email detected in the full pass,
-    // while leaving every line available for the user to review.
-    const emailFromFull=window.CardKeeperParser.parseCard(full.raw).fields.email;
-    const emailFromParts=$("email").value;
-    if(emailFromFull&&emailFromParts&&emailFromFull!==emailFromParts) {
-      const localA=emailFromFull.split("@")[0],localB=emailFromParts.split("@")[0];
-      if(localA===localB) {
-        $("email").value=emailFromFull;
-        const www=($("website").value||"").replace(/^https?:\/\//i,"").replace(/^www\./i,"");
-        const domain=emailFromFull.split("@")[1];
-        if(www){
-          const tail=www.split(/[\/:?#]/)[0];
-          let differences=Math.abs(tail.length-domain.length);
-          if(differences<=2){for(let i=0;i<Math.min(tail.length,domain.length);i++)if(tail[i]!==domain[i])differences++;}
-          if(differences<=2)$("website").value="www."+domain;
-        }
-      }
+    if(!best.raw)throw Error("Text could not be recognized. Use Apple's Scan Text option.");
+    const raw=best.raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,65).join("\n");
+    showResults(raw,true,best.confidence);
+    if(best.confidence<55){
+      // Preserve only strongly structured fields, not guessed names/addresses.
+      for(const field of ["firstName","lastName","company","title","address"]){$(field).value="";}
+      notice("Automatic OCR is unreliable for this card. Use Apple's Scan Text instead, or correct the text before saving.");
+      const box=$("scanWarnings");
+      const p=document.createElement("p");
+      p.textContent="Poor-quality recognition detected. Uncertain contact fields were intentionally left blank.";
+      box.appendChild(p);box.classList.remove("hidden");
     }
-    if(confidence<60)notice("This photo is difficult to read. Crop to the card's front, or use Apple Live Text, before saving.");
   }catch(error){
     notice((error&&error.message)||"OCR failed. Use Apple Live Text or crop a clearer photo.");
     if(imageFile)showCard(true);
@@ -359,6 +312,10 @@ $("shareContactButton").addEventListener("click",saveContact);
 $("newScanButton").addEventListener("click",()=>{$("cameraInput").click();});
 $("retryOCR").addEventListener("click",()=>{if(imageFile&&!running)scanImage(imageFile);});
 $("reparseText").addEventListener("click",()=>{const raw=$("rawText").value.trim();if(raw)showResults(raw,Boolean(imageFile),null);});
+$("focusLiveText").addEventListener("click",()=>{
+  $("liveTextInput").focus();
+  $("liveTextInput").scrollIntoView({behavior:"smooth",block:"center"});
+});
 $("parseLiveText").addEventListener("click",()=>{
   const text=$("liveTextInput").value.trim();
   if(!text){notice("Paste text or use the iPhone Scan Text menu in the box first.");return;}
